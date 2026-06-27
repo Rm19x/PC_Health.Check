@@ -20,6 +20,8 @@ if %errorLevel% == 0 (
 )
 
 :main_menu
+:: Memastikan lokasi aktif CMD pindah ke folder tempat file .bat ini berada
+cd /d "%~dp0"
 cls
 color 0A
 echo =====================================================================
@@ -246,7 +248,7 @@ goto back
 :opt18
 cls
 echo [*] Cek Model dan Vendor Layar (Monitor)...
-wmic path win32_PnPEntity deviceid where "Service='monitor'" get Name
+wmic path win32_PnPEntity where "Service='monitor'" get Name
 goto back
 
 :opt19
@@ -426,95 +428,94 @@ goto back
 
 :opt48
 cls
-echo [*] Menghasilkan Laporan Ringkas ke file teks (pchealth_report.txt)...
-set REPORT_FILE=pchealth_report.txt
-echo =========================================== > %REPORT_FILE%
-echo             PC HEALTH CHECK REPORT          >> %REPORT_FILE%
-echo  Creator : M.Rm19 ^(github.com/Rm19x^)      >> %REPORT_FILE%
-echo  Tanggal : %date% %time%                    >> %REPORT_FILE%
-echo =========================================== >> %REPORT_FILE%
-echo. >> %REPORT_FILE%
-echo [1] KESEHATAN DRIVE STORAGE: >> %REPORT_FILE%
-wmic diskdrive get model, status >> %REPORT_FILE%
-echo [2] INFORMASI SISTEM & OS: >> %REPORT_FILE%
-wmic computersystem get Manufacturer, Model >> %REPORT_FILE%
-wmic bios get serialnumber >> %REPORT_FILE%
-echo [3] INFORMASI RAM ERROR LOG: >> %REPORT_FILE%
-powershell -Command "$el = Get-WinEvent -FilterHashtable @{LogName='System'; Id=2,47} -ErrorAction SilentlyContinue; if($el){'RAM STATUS: ERROR DETECTED'}else{'RAM STATUS: 100% OK'}" >> %REPORT_FILE%
-echo. >> %REPORT_FILE%
+set REPORT_FILE=%~dp0pchealth_report.txt
+echo =========================================== > "%REPORT_FILE%"
+echo             PC HEALTH CHECK REPORT          >> "%REPORT_FILE%"
+echo  Creator : M.Rm19 ^(github.com/Rm19x^)      >> "%REPORT_FILE%"
+echo  Tanggal : %date% %time%                    >> "%REPORT_FILE%"
+echo =========================================== >> "%REPORT_FILE%"
+echo. >> "%REPORT_FILE%"
+echo [1] KESEHATAN DRIVE STORAGE: >> "%REPORT_FILE%"
+wmic diskdrive get model, status >> "%REPORT_FILE%"
+echo [2] INFORMASI SISTEM & OS: >> "%REPORT_FILE%"
+wmic computersystem get Manufacturer, Model >> "%REPORT_FILE%"
+wmic bios get serialnumber >> "%REPORT_FILE%"
+echo [3] INFORMASI RAM ERROR LOG: >> "%REPORT_FILE%"
+powershell -Command "$el = Get-WinEvent -FilterHashtable @{LogName='System'; Id=2,47} -ErrorAction SilentlyContinue; if($el){'RAM STATUS: ERROR DETECTED'}else{'RAM STATUS: 100% OK'}" >> "%REPORT_FILE%"
+echo. >> "%REPORT_FILE%"
 echo Laporan dasar berhasil disimpan di %REPORT_FILE%!
 goto back
 
 :opt49
 cls
-set FULL_REPORT=pchealth_full_report.txt
-echo ======================================================== > %FULL_REPORT%
-echo           PC HEALTH CHECK - FULL SCAN REPORT            >> %FULL_REPORT%
-echo ======================================================== >> %FULL_REPORT%
-echo  Creator : M.Rm19                                       >> %FULL_REPORT%
-echo  Github  : github.com/Rm19x                            >> %FULL_REPORT%
-echo  Waktu   : %date% %time%                                >> %FULL_REPORT%
-echo ======================================================== >> %FULL_REPORT%
-echo. >> %FULL_REPORT%
+set FULL_REPORT=%~dp0pchealth_full_report.txt
+echo ======================================================== > "%FULL_REPORT%"
+echo           PC HEALTH CHECK - FULL SCAN REPORT            >> "%FULL_REPORT%"
+echo ======================================================== >> "%FULL_REPORT%"
+echo  Creator : M.Rm19                                       >> "%FULL_REPORT%"
+echo  Github  : github.com/Rm19x                            >> "%FULL_REPORT%"
+echo  Waktu   : %date% %time%                                >> "%FULL_REPORT%"
+echo ======================================================== >> "%FULL_REPORT%"
+echo. >> "%FULL_REPORT%"
 
 echo [!] MENJALANKAN FULL SCAN OTOMATIS (1-48)... MOHON TUNGGU...
 echo Harap sabar, semua data komponen sedang diekstraksi ke %FULL_REPORT%...
 echo.
 
 echo [+] Mengambil data Storage...
-echo --- [1-4] STORAGE INFO ^& HEALTH --- >> %FULL_REPORT%
-powershell -Command "$d = Get-CimInstance Win32_DiskDrive; foreach($b in $d){ if($b.Status -eq 'OK'){ 'Drive: ' + $b.Model + ' -> [ 100% BAGUS / SEHAT ]' } else { 'Drive: ' + $b.Model + ' -> [ 0% JELEK / ERROR ]' } }" >> %FULL_REPORT%
-powershell -Command "Get-PhysicalDisk | Select-Object DeviceId, Model, MediaType, Size | Out-String" >> %FULL_REPORT%
+echo --- [1-4] STORAGE INFO ^& HEALTH --- >> "%FULL_REPORT%"
+powershell -Command "Get-CimInstance Win32_DiskDrive | ForEach-Object { if($_.Status -eq \"OK\"){ \"Drive: $($_.Model) -> [ 100%% BAGUS / SEHAT ]\" } else { \"Drive: $($_.Model) -> [ 0%% JELEK / ERROR ]\" } }" >> "%FULL_REPORT%"
+powershell -Command "Get-PhysicalDisk | Select-Object DeviceId, Model, MediaType, Size | Out-String" >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Baterai...
-echo --- [2-3] BATTERY METRICS --- >> %FULL_REPORT%
-powershell -Command "$b=Get-CimInstance -Namespace root/WMI -ClassName BatteryFullChargedCapacity;$d=Get-CimInstance -Namespace root/WMI -ClassName BatteryStaticData; if($b -and $d){ $health = [math]::Round(($b.FullChargedCapacity / $d.DesignedCapacity) * 100, 2); 'Kapasitas Desain: ' + $d.DesignedCapacity + ' mWh'; 'Kapasitas Sekarang: ' + $b.FullChargedCapacity + ' mWh'; 'Skor Kesehatan Baterai: ' + $health + '%'; if($health -ge 75){'Status Baterai: BAGUS'}else{'Status Baterai: JELEK'} } else { 'Baterai tidak dideteksi (PC Desktop)' }" >> %FULL_REPORT%
-powershell -Command "$b=Get-CimInstance -Namespace root/WMI -ClassName BatteryCycleCount; if($b){ 'Battery Cycle Count: ' + $b.CycleCount } " >> %FULL_REPORT%
+echo --- [2-3] BATTERY METRICS --- >> "%FULL_REPORT%"
+powershell -Command "$b=Get-CimInstance -Namespace root/WMI -ClassName BatteryFullChargedCapacity;$d=Get-CimInstance -Namespace root/WMI -ClassName BatteryStaticData; if($b -and $d){ $health = [math]::Round(($b.FullChargedCapacity / $d.DesignedCapacity) * 100, 2); \"Kapasitas Desain: $($d.DesignedCapacity) mWh\"; \"Kapasitas Sekarang: $($b.FullChargedCapacity) mWh\"; \"Skor Kesehatan Baterai: $($health)%%\"; if($health -ge 75){\"Status Baterai: BAGUS\"}else{\"Status Baterai: JELEK\"} } else { \"Baterai tidak dideteksi (PC Desktop)\" }" >> "%FULL_REPORT%"
+powershell -Command "$b=Get-CimInstance -Namespace root/WMI -ClassName BatteryCycleCount; if($b){ \"Battery Cycle Count: $($b.CycleCount)\" } " >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Memori RAM...
-echo --- [5-8, 46] RAM METRICS ^& HARDWARE ERROR LOG --- >> %FULL_REPORT%
-wmic memorychip get Manufacturer, PartNumber, speed >> %FULL_REPORT%
-powershell -Command "$m=Get-CimInstance Win32_PhysicalMemoryArray; $c=Get-CimInstance Win32_PhysicalMemory; 'Total Slot Tersedia: ' + $m.MemoryDevices; 'Slot Terisi: ' + ($c | Measure-Object).Count; 'Maksimal Upgrade RAM: ' + [math]::Round($m.MaxCapacity / 1GB, 2) + ' GB'" >> %FULL_REPORT%
-powershell -Command "$el = Get-WinEvent -FilterHashtable @{LogName='System'; Id=2,47} -ErrorAction SilentlyContinue; if($el){ 'STATUS RAM: JELEK (Hardware Error Terdeteksi di Log System)' } else { 'STATUS RAM: 100% BAGUS (Bersih dari Log Error)' }" >> %FULL_REPORT%
+echo --- [5-8, 46] RAM METRICS ^& HARDWARE ERROR LOG --- >> "%FULL_REPORT%"
+wmic memorychip get Manufacturer, PartNumber, speed >> "%FULL_REPORT%"
+powershell -Command "$m=Get-CimInstance Win32_PhysicalMemoryArray; $c=Get-CimInstance Win32_PhysicalMemory; \"Total Slot Tersedia: $($m.MemoryDevices)\"; \"Slot Terisi: $(@($c).Count)\"; \"Maksimal Upgrade RAM: $([math]::Round($m.MaxCapacity / 1GB, 2)) GB\"" >> "%FULL_REPORT%"
+powershell -Command "$el = Get-WinEvent -FilterHashtable @{LogName='System'; Id=2,47} -ErrorAction SilentlyContinue; if($el){ \"STATUS RAM: JELEK (Hardware Error Terdeteksi di Log System)\" } else { \"STATUS RAM: 100%% BAGUS (Bersih dari Log Error)\" }" >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Prosesor CPU...
-echo --- [9-10] CPU DIAGNOSTICS --- >> %FULL_REPORT%
-wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors >> %FULL_REPORT%
-powershell -Command "$t = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue; if($t){ $celsius = [math]::Round(($t.CurrentTemperature / 10) - 273.15, 1); 'Suhu CPU Terbaca: ' + $celsius + ' C'; if($celsius -gt 85){'STATUS: OVERHEAT (JELEK)'}else{'STATUS: ADEM (BAGUS)'} } else { 'Sensor suhu diblokir BIOS' }" >> %FULL_REPORT%
+echo --- [9-10] CPU DIAGNOSTICS --- >> "%FULL_REPORT%"
+wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors >> "%FULL_REPORT%"
+powershell -Command "$t = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue; if($t){ $celsius = [math]::Round(($t.CurrentTemperature / 10) - 273.15, 1); \"Suhu CPU Terbaca: $($celsius) C\"; if($celsius -gt 85){\"STATUS: OVERHEAT (JELEK)\"}else{\"STATUS: ADEM (BAGUS)\"} } else { \"Sensor suhu diblokir BIOS\" }" >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Identitas Motherboard ^& BIOS...
-echo --- [11-13, 19] BOARD, MODEL ^& BIOS INFO --- >> %FULL_REPORT%
-wmic baseboard get product, Manufacturer, SerialNumber >> %FULL_REPORT%
-wmic computersystem get Manufacturer, Model >> %FULL_REPORT%
-wmic bios get name, version, releaseDate, serialnumber >> %FULL_REPORT%
+echo --- [11-13, 19] BOARD, MODEL ^& BIOS INFO --- >> "%FULL_REPORT%"
+wmic baseboard get product, Manufacturer, SerialNumber >> "%FULL_REPORT%"
+wmic computersystem get Manufacturer, Model >> "%FULL_REPORT%"
+wmic bios get name, version, releaseDate, serialnumber >> "%FULL_REPORT%"
 
 echo [+] Mengambil data GPU ^& Monitor...
-echo --- [14-15, 18] GRAPHICS ^& DISPLAY INFO --- >> %FULL_REPORT%
-wmic path win32_VideoController get Name >> %FULL_REPORT%
-powershell -Command "Get-CimInstance Win32_VideoController | Select-Object Name, @{Name='VRAM (GB)';Expression={[math]::Round($_.AdapterRAM / 1GB, 2)}} | Out-String" >> %FULL_REPORT%
-wmic path win32_PnPEntity deviceid where "Service='monitor'" get Name >> %FULL_REPORT%
+echo --- [14-15, 18] GRAPHICS ^& DISPLAY INFO --- >> "%FULL_REPORT%"
+wmic path win32_VideoController get Name >> "%FULL_REPORT%"
+powershell -Command "Get-CimInstance Win32_VideoController | Select-Object Name, @{Name='VRAM (GB)';Expression={[math]::Round($_.AdapterRAM / 1GB, 2)}} | Out-String" >> "%FULL_REPORT%"
+wmic path win32_PnPEntity where "Service='monitor'" get Name >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Sistem Operasi Windows...
-echo --- [17, 20, 22-24] WINDOWS ENVIRONMENT ^& DRIVERS --- >> %FULL_REPORT%
-powershell -Command "Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, @{Name='Sisa (%)';Expression={[math]::Round(($_.SizeRemaining / $_.Size) * 100, 1)}} | Out-String" >> %FULL_REPORT%
-systeminfo | find /i "Original Install Date" >> %FULL_REPORT%
-powershell -Command "$d = Get-CimInstance Win32_PnPEntity | Where-Object {$_.ConfigManagerErrorCode -ne 0}; if($d){ 'STATUS DRIVER: ADA ERROR' } else { 'STATUS DRIVER: 100% NORMAL BAGUS' }" >> %FULL_REPORT%
+echo --- [17, 20, 22-24] WINDOWS ENVIRONMENT ^& DRIVERS --- >> "%FULL_REPORT%"
+powershell -Command "Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, @{Name='Sisa (%%)';Expression={[math]::Round(($_.SizeRemaining / $_.Size) * 100, 1)}} | Out-String" >> "%FULL_REPORT%"
+systeminfo | find /i "Original Install Date" >> "%FULL_REPORT%"
+powershell -Command "$d = Get-CimInstance Win32_PnPEntity | Where-Object {$_.ConfigManagerErrorCode -ne 0}; if($d){ \"STATUS DRIVER: ADA ERROR\" } else { \"STATUS DRIVER: 100%% NORMAL BAGUS\" }" >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Konektivitas...
-echo --- [25-28, 42-43, 45] NETWORK, PORTS ^& MULTIMEDIA --- >> %FULL_REPORT%
-powershell -Command "$k = Get-CimInstance Win32_PnPEntity | Where-Object {$_.PNPClass -eq 'Camera' -or $_.Name -like '*webcam*'}; if($k){ 'Kamera Hardware: TERDETEKSI (BAGUS)' } else { 'Kamera Hardware: TIDAK TERDETEKSI' }" >> %FULL_REPORT%
-netsh wlan show interfaces | findstr /i "State SSID Signal" >> %FULL_REPORT%
-ipconfig | findstr /i "IPv4 Description" >> %FULL_REPORT%
+echo --- [25-28, 42-43, 45] NETWORK, PORTS ^& MULTIMEDIA --- >> "%FULL_REPORT%"
+powershell -Command "$k = Get-CimInstance Win32_PnPEntity | Where-Object {$_.PNPClass -eq 'Camera' -or $_.Name -like '*webcam*'}; if($k){ \"Kamera Hardware: TERDETEKSI (BAGUS)\" } else { \"Kamera Hardware: TIDAK TERDETEKSI\" }" >> "%FULL_REPORT%"
+netsh wlan show interfaces | findstr /i "State SSID Signal" >> "%FULL_REPORT%"
+ipconfig | findstr /i "IPv4 Description" >> "%FULL_REPORT%"
 
 echo [+] Mengambil data Log Keamanan...
-echo --- [34-36] SECURITY ^& LIVE SYSTEM LOG --- >> %FULL_REPORT%
-powershell -Command "if(Confirm-SecureBootUEFI){'Secure Boot: AKTIF'} else {'Secure Boot: NONAKTIF'}" >> %FULL_REPORT%
-powershell -Command "$err = Get-EventLog -LogName System -EntryType Error -After (Get-Date).AddDays(-1) -ErrorAction SilentlyContinue; if($err){ 'Log System 24 Jam: Terjadi ' + ($err | Measure-Object).Count + ' Error (Ada Kendala Software)' } else { 'Log System 24 Jam: 100% CLEAN (BAGUS)' }" >> %FULL_REPORT%
+echo --- [34-36] SECURITY ^& LIVE SYSTEM LOG --- >> "%FULL_REPORT%"
+powershell -Command "if(Confirm-SecureBootUEFI){'Secure Boot: AKTIF'} else {'Secure Boot: NONAKTIF'}" >> "%FULL_REPORT%"
+powershell -Command "$err = Get-EventLog -LogName System -EntryType Error -After (Get-Date).AddDays(-1) -ErrorAction SilentlyContinue; if($err){ \"Log System 24 Jam: Terjadi $($err.Count) Error (Ada Kendala Software)\" } else { \"Log System 24 Jam: 100%% CLEAN (BAGUS)\" }" >> "%FULL_REPORT%"
 
-echo. >> %FULL_REPORT%
-echo ======================================================== >> %FULL_REPORT%
-echo       PROSES DIAGNOSIS SELESAI OLEH M.RM19              >> %FULL_REPORT%
-echo ======================================================== >> %FULL_REPORT%
+echo. >> "%FULL_REPORT%"
+echo ======================================================== >> "%FULL_REPORT%"
+echo       PROSES DIAGNOSIS SELESAI OLEH M.RM19              >> "%FULL_REPORT%"
+echo ======================================================== >> "%FULL_REPORT%"
 
 cls
 color 0B
